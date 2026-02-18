@@ -24,6 +24,11 @@ public class KMStoreDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Role>().HasData(
+    new Role { Id = 1, Name = "Admin" },
+    new Role { Id = 2, Name = "User" }
+);
+
         // Unique: aynı category için aynı dil 1 kez olsun
         modelBuilder.Entity<CategoryTranslation>()
             .HasIndex(x => new { x.CategoryId, x.LanguageCode })
