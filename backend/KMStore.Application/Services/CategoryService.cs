@@ -1,6 +1,8 @@
 ﻿using KMStore.Application.Abstractions;
 using KMStore.Application.DTOs.Categories;
 using KMStore.Domain.Entities;
+using KMStore.Application.Exceptions;
+
 
 namespace KMStore.Application.Services;
 
@@ -61,7 +63,7 @@ public class CategoryService
         if (string.IsNullOrWhiteSpace(name)) throw new Exception("Name is required.");
 
         var category = await _repo.GetCategoryWithTranslationsAsync(id);
-        if (category is null) throw new Exception("Category not found.");
+        if (category is null) throw new NotFoundException("Category not found.");
 
         var exists = await _repo.CategoryNameExistsAsync(lang, name, exceptCategoryId: id);
         if (exists) throw new Exception("Category name already exists for this language.");

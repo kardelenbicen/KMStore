@@ -40,6 +40,39 @@ public class ProductRepository : IProductRepository
     }
 
     public Task SaveChangesAsync() => _db.SaveChangesAsync();
+    public async Task<(List<ProductListItem> Items, int TotalCount)> GetProductsByCategoryPagedAsync(
+    int categoryId, string languageCode, int page, int pageSize)
+    {
+        var query = _db.Products
+            .Where(p => p.CategoryId == categoryId && p.IsActive);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(p => p.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new ProductListItem
+            {
+                Id = p.Id,
+                CategoryId = p.CategoryId,
+                Price = p.Price,
+                Stock = p.Stock,
+                IsActive = p.IsActive,
+                Name = p.Translations
+                    .Where(t => t.LanguageCode == languageCode)
+                    .Select(t => t.Name)
+                    .FirstOrDefault(),
+                Description = p.Translations
+                    .Where(t => t.LanguageCode == languageCode)
+                    .Select(t => t.Description)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
 
     public async Task<List<ProductListItem>> GetProductsByCategoryAsync(int categoryId, string languageCode)
     {

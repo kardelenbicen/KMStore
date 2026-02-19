@@ -28,9 +28,13 @@ public class ProductsController : ControllerBase
     // Herkes: kategoriye göre ürün listele
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetByCategory([FromQuery] int categoryId, [FromQuery] string lang = "tr")
+    public async Task<IActionResult> GetByCategory(
+    [FromQuery] int categoryId,
+    [FromQuery] string lang = "tr",
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 10)
     {
-        var result = await _service.GetByCategoryAsync(categoryId, lang);
+        var result = await _service.GetByCategoryPagedAsync(categoryId, lang, page, pageSize);
         return Ok(result);
     }
     // Admin: ürün güncelle
