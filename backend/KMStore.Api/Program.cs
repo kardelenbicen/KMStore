@@ -1,5 +1,8 @@
+using KMStore.Application.Abstractions;
+using KMStore.Application.Services;
 using KMStore.Infrastructure.Auth;
 using KMStore.Infrastructure.Persistence;
+using KMStore.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -46,9 +49,14 @@ builder.Services.AddSwaggerGen(options =>
 
 });
 
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
