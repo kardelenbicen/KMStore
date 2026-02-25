@@ -117,31 +117,51 @@ public class ProductService
         product.IsActive = false;
         await _repo.SaveChangesAsync();
     }
-    public async Task<PagedResponse<ProductResponse>> GetByCategoryPagedAsync(int categoryId, string lang, int page, int pageSize)
+    public async Task<PagedResponse<ProductResponse>> GetByCategoryPagedAsync(
+     int categoryId,
+     string lang,
+     int page,
+     int pageSize,
+     string? search,
+     decimal? minPrice,
+     decimal? maxPrice,
+     string sortBy,
+     string sortDir)
     {
         lang = (lang ?? "tr").Trim().ToLower();
+        sortBy = (sortBy ?? "newest").Trim().ToLower();
+        sortDir = (sortDir ?? "desc").Trim().ToLower();
+
+        if (sortBy is not ("newest" or "price"))
+            throw new BadRequestException("sortBy must be 'newest' or 'price'.");
+
+        if (sortDir is not ("asc" or "desc"))
+            throw new BadRequestException("sortDir must be 'asc' or 'desc'.");
 
         if (categoryId <= 0) throw new BadRequestException("categoryId is required.");
         if (page <= 0) throw new BadRequestException("page must be >= 1.");
         if (pageSize <= 0) throw new BadRequestException("pageSize must be >= 1.");
         if (pageSize > 50) throw new BadRequestException("pageSize must be <= 50.");
 
+        if (minPrice.HasValue && minPrice.Value < 0)
+            throw new BadRequestException("minPrice must be >= 0.");
+
+        if (maxPrice.HasValue && maxPrice.Value < 0)
+            throw new BadRequestException("maxPrice must be >= 0.");
+
+        if (minPrice.HasValue && maxPrice.HasValue && minPrice.Value > maxPrice.Value)
+            throw new BadRequestException("minPrice cannot be greater than maxPrice.");
+
         var categoryExists = await _repo.CategoryExistsAsync(categoryId);
         if (!categoryExists) throw new NotFoundException("Category not found.");
-
-        var (items, totalCount) = await _repo.GetProductsByCategoryPagedAsync(categoryId, lang, page, pageSize);
+        var (items, totalCount) = await _repo.GetProductsByCategoryPagedAsync(
+            categoryId, lang, page, pageSize, search, minPrice, maxPrice, sortBy, sortDir);
 
         var mapped = items
             .Where(x => x.Name != null)
             .Select(x => new ProductResponse(
-                x.Id,
-                x.CategoryId,
-                x.Price,
-                x.Stock,
-                x.IsActive,
-                lang,
-                x.Name!,
-                x.Description ?? ""
+                x.Id, x.CategoryId, x.Price, x.Stock, x.IsActive,
+                lang, x.Name!, x.Description ?? ""
             ))
             .ToList();
 

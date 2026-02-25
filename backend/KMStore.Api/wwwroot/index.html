@@ -1,0 +1,239 @@
+﻿<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>KMStore - Ürünler</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 30px;
+        }
+
+        select, input, button {
+            padding: 6px;
+            margin-right: 10px;
+        }
+
+        table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>KMStore - Ürün Listeleme</h2>
+
+    <div>
+        Kategori:
+        <select id="categorySelect"></select>
+
+        Arama:
+        <input id="searchInput" placeholder="Ürün ara" />
+
+        <button id="listBtn">Listele</button>
+    </div>
+
+    <!-- ✅ Filtre & Sıralama -->
+    <div class="controls" style="margin-top:10px;">
+        Min Fiyat:
+        <input id="minPriceInput" type="number" step="0.01" style="width:120px;" />
+
+        Max Fiyat:
+        <input id="maxPriceInput" type="number" step="0.01" style="width:120px;" />
+
+        Sıralama:
+        <select id="sortBySelect">
+            <option value="newest" selected>En Yeni</option>
+            <option value="price">Fiyat</option>
+        </select>
+
+        Yön:
+        <select id="sortDirSelect">
+            <option value="desc" selected>Azalan</option>
+            <option value="asc">Artan</option>
+        </select>
+    </div>
+
+    <!-- ✅ Pagination UI (BURASI JS İÇİNE GİRMEYECEK) -->
+    <div class="controls">
+        Sayfa Boyutu:
+        <select id="pageSizeSelect">
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+        </select>
+
+        <button id="prevBtn">⬅ Önceki</button>
+        <span id="pageInfo">Sayfa 1</span>
+        <button id="nextBtn">Sonraki ➡</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Ürün</th>
+                <th>Açıklama</th>
+                <th>Fiyat</th>
+                <th>Stok</th>
+            </tr>
+        </thead>
+        <tbody id="productTable"></tbody>
+    </table>
+
+    <script>
+        let state = {
+            page: 1,
+            pageSize: 5,
+            totalPages: 1,
+            sortBy: "newest",
+            sortDir: "desc",
+            minPrice: "",
+            maxPrice: ""
+        };
+
+        let currentCategoryId = null;
+
+        async function loadCategories() {
+            const response = await fetch("/api/Categories?lang=tr");
+            const data = await response.json();
+
+            const select = document.getElementById("categorySelect");
+            select.innerHTML = "";
+
+            data.forEach(c => {
+                const option = document.createElement("option");
+                option.value = c.id;
+                option.textContent = c.name;
+                select.appendChild(option);
+            });
+
+            if (data.length > 0) {
+                currentCategoryId = Number(data[0].id);
+                select.value = currentCategoryId;
+            }
+
+            select.addEventListener("change", function () {
+                currentCategoryId = Number(this.value);
+                state.page = 1;
+                loadProducts();
+            });
+        }
+
+        async function loadProducts() {
+            if (!currentCategoryId) return;
+
+            const search = document.getElementById("searchInput").value;
+
+            const minPrice = document.getElementById("minPriceInput")?.value ?? "";
+            const maxPrice = document.getElementById("maxPriceInput")?.value ?? "";
+
+            let url =
+                `/api/Products?categoryId=${currentCategoryId}` +
+                `&lang=tr&page=${state.page}&pageSize=${state.pageSize}` +
+                `&search=${encodeURIComponent(search)}` +
+                `&sortBy=${state.sortBy}&sortDir=${state.sortDir}`;
+
+            if (minPrice !== "") url += `&minPrice=${encodeURIComponent(minPrice)}`;
+            if (maxPrice !== "") url += `&maxPrice=${encodeURIComponent(maxPrice)}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // ✅ pagination bilgisi
+            state.totalPages = data.totalPages || 1;
+            document.getElementById("pageInfo").innerText =
+                `Sayfa ${state.page} / ${state.totalPages}`;
+
+            document.getElementById("prevBtn").disabled = state.page <= 1;
+            document.getElementById("nextBtn").disabled = state.page >= state.totalPages;
+
+            // ✅ tablo
+            const table = document.getElementById("productTable");
+            table.innerHTML = "";
+
+            if (!data.items || data.items.length === 0) {
+                table.innerHTML = "<tr><td colspan='4'>Ürün bulunamadı</td></tr>";
+                return;
+            }
+
+            data.items.forEach(p => {
+                const row = `
+                  <tr>
+                    <td>${p.name}</td>
+                    <td>${p.description}</td>
+                    <td>${p.price} ₺</td>
+                    <td>${p.stock}</td>
+                  </tr>
+                `;
+                table.innerHTML += row;
+            });
+        }
+
+        // ✅ Eventler
+        document.getElementById("listBtn").addEventListener("click", () => {
+            state.page = 1;
+            state.sortBy = document.getElementById("sortBySelect").value;
+            state.sortDir = document.getElementById("sortDirSelect").value;
+            loadProducts();
+        });
+
+        document.getElementById("searchInput").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                state.page = 1;
+                loadProducts();
+            }
+        });
+
+        document.getElementById("sortBySelect").addEventListener("change", (e) => {
+            state.sortBy = e.target.value;
+            state.page = 1;
+            loadProducts();
+        });
+
+        document.getElementById("sortDirSelect").addEventListener("change", (e) => {
+            state.sortDir = e.target.value;
+            state.page = 1;
+            loadProducts();
+        });
+
+        document.getElementById("prevBtn").addEventListener("click", () => {
+            if (state.page > 1) {
+                state.page--;
+                loadProducts();
+            }
+        });
+
+        document.getElementById("nextBtn").addEventListener("click", () => {
+            if (state.page < state.totalPages) {
+                state.page++;
+                loadProducts();
+            }
+        });
+
+        document.getElementById("pageSizeSelect").addEventListener("change", (e) => {
+            state.pageSize = Number(e.target.value);
+            state.page = 1;
+            loadProducts();
+        });
+
+        // İlk yükleme
+        loadCategories().then(loadProducts);
+    </script>
+
+</body>
+</html>

@@ -41,15 +41,54 @@ public class ProductRepository : IProductRepository
 
     public Task SaveChangesAsync() => _db.SaveChangesAsync();
     public async Task<(List<ProductListItem> Items, int TotalCount)> GetProductsByCategoryPagedAsync(
-    int categoryId, string languageCode, int page, int pageSize)
+    int categoryId,
+    string languageCode,
+    int page,
+    int pageSize,
+    string? search,
+    decimal? minPrice,
+    decimal? maxPrice,
+    string sortBy,
+    string sortDir)
     {
         var query = _db.Products
-            .Where(p => p.CategoryId == categoryId && p.IsActive);
+    .Include(p => p.Translations)
+    .Where(p => p.CategoryId == categoryId && p.IsActive);
+
+        if (minPrice.HasValue)
+            query = query.Where(p => p.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(p => p.Price <= maxPrice.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            query = query.Where(p =>
+                p.Translations.Any(t =>
+                    t.LanguageCode == languageCode &&
+                    t.Name.Contains(s)));
+        }
+        sortBy = (sortBy ?? "newest").Trim().ToLower();
+        sortDir = (sortDir ?? "desc").Trim().ToLower();
+
+        if (sortBy == "price")
+        {
+            query = sortDir == "asc"
+                ? query.OrderBy(p => p.Price)
+                : query.OrderByDescending(p => p.Price);
+        }
+        else // newest
+        {
+            query = sortDir == "asc"
+                ? query.OrderBy(p => p.Id)
+                : query.OrderByDescending(p => p.Id);
+        }
 
         var totalCount = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(p => p.Id)
+            
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new ProductListItem

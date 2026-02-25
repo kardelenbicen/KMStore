@@ -11,7 +11,15 @@ public interface IProductRepository
     Task SaveChangesAsync();
     Task<List<ProductListItem>> GetProductsByCategoryAsync(int categoryId, string languageCode);
     Task<(List<ProductListItem> Items, int TotalCount)> GetProductsByCategoryPagedAsync(
-    int categoryId, string languageCode, int page, int pageSize);
+    int categoryId,
+    string languageCode,
+    int page,
+    int pageSize,
+    string? search,
+    decimal? minPrice,
+    decimal? maxPrice,
+    string sortBy,
+    string sortDir);
 
     Task<Product?> GetProductWithTranslationsAsync(int productId);
     Task<bool> ProductExistsAsync(int productId);

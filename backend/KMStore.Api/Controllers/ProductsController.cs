@@ -25,18 +25,27 @@ public class ProductsController : ControllerBase
         return Ok(result);
     }
 
-    // Herkes: kategoriye göre ürün listele
+    // Herkes: kategoriye göre ürün listele (+ arama/filtre)
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetByCategory(
-    [FromQuery] int categoryId,
-    [FromQuery] string lang = "tr",
-    [FromQuery] int page = 1,
-    [FromQuery] int pageSize = 10)
+        [FromQuery] int categoryId,
+        [FromQuery] string lang = "tr",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] string sortBy = "newest",
+        [FromQuery] string sortDir = "desc")
     {
-        var result = await _service.GetByCategoryPagedAsync(categoryId, lang, page, pageSize);
+        var result = await _service.GetByCategoryPagedAsync(
+    categoryId, lang, page, pageSize, search, minPrice, maxPrice, sortBy, sortDir);
+
         return Ok(result);
     }
+
+
     // Admin: ürün güncelle
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Admin")]
